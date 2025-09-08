@@ -1,0 +1,49 @@
+name: 02-ci-with-variables
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_env:
+        type: choice
+        description: 'Environment'
+        options: [staging, production]
+        default: staging
+
+# Variables a nivel de workflow
+env:
+  APP_NAME: miprimer-ci-cd
+  DEFAULT_REGION: us-east-1
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    # Variables a nivel de job (combina env + inputs + repo vars)
+    env:
+      RUN_ID: ${{ github.run_id }}
+      GIT_SHA: ${{ github.sha }}
+      TARGET_ENV: ${{ inputs.target_env }}
+      # Usa variable de repositorio (Settings → Secrets and variables → Actions → Variables)
+      DEPLOY_REGION: ${{ vars.DEPLOY_REGION || env.DEFAULT_REGION }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Mostrar variables
+        run: |
+          echo "APP_NAME=${APP_NAME}"
+          echo "TARGET_ENV=${TARGET_ENV}"
+          echo "DEPLOY_REGION=${DEPLOY_REGION}"
+          echo "RUN_ID=${RUN_ID}"
+          echo "GIT_SHA=${GIT_SHA}"
+
+      - name: Login a Docker Hub (ejemplo con secrets)
+        if: ${{ secrets.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != '' }}
+        run: |
+          echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+
+      - name: Build de imagen (demo)
+        run: |
+          echo "docker build -t ${APP_NAME}:${GIT_SHA} ."
+

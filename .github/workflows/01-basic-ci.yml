@@ -1,0 +1,51 @@
+name: 01-basic-ci
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # --- Node.js (si existe package.json) ---
+      - name: Setup Node
+        if: ${{ hashFiles('package.json') != '' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install deps (Node)
+        if: ${{ hashFiles('package.json') != '' }}
+        run: npm ci || npm i
+
+      - name: Test (Node)
+        if: ${{ hashFiles('package.json') != '' }}
+        run: npm test --if-present
+
+      # --- Python (si existe requirements.txt) ---
+      - name: Setup Python
+        if: ${{ hashFiles('requirements.txt') != '' }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install deps (Python)
+        if: ${{ hashFiles('requirements.txt') != '' }}
+        run: pip install -r requirements.txt
+
+      - name: PyTest (si existe carpeta tests/)
+        if: ${{ hashFiles('requirements.txt') != '' && hashFiles('tests/**') != '' }}
+        run: pytest -q || true
+
+      # --- Lint rápido de scripts shell, si los hay ---
+      - name: Lint shell scripts
+        if: ${{ hashFiles('**/*.sh') != '' }}
+        run: |
+          sudo apt-get update && sudo apt-get install -y shellcheck
+          shellcheck **/*.sh || true
+

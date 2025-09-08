@@ -1,0 +1,34 @@
+name: 03-conditional-by-branch
+
+on:
+  push:
+    branches: [main, develop, 'feature/*']
+
+# Evita despliegues solapados en la misma rama
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "Running tests on $GITHUB_REF"
+
+  deploy-staging:
+    needs: tests
+    if: ${{ startsWith(github.ref, 'refs/heads/develop') || startsWith(github.ref, 'refs/heads/feature/') }}
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - run: echo "Deploying to STAGING (branch: $GITHUB_REF)"
+
+  deploy-production:
+    needs: tests
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - run: echo "Deploying to PRODUCTION (branch: $GITHUB_REF)"
+
